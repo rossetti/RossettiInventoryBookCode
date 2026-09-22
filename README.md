@@ -54,8 +54,8 @@ Chapter 7 material. Section labels in the book are semantic for the same reason.
 | `inventory.dynamiclotsizing` | Time-varying requirements: the window cost, Wagner-Whitin, the heuristics, the rolling horizon | Dynamic Lot Sizing |
 | `inventory.requirementsplanning` | Bills of material, low-level codes, the MRP record, the explosion, distribution networks | Material and Distribution Requirements Planning |
 | `inventory.newsvendor` | The single-period model: loss functions, moment matching, distribution fitting, and a Monte Carlo evaluation checked against the critical ratio | Single-Period Stochastic Inventory |
-| `inventory.continuousreview` | The $(r, Q)$ policy: lead time demand, the measures, the cost bounds, and the optimization | Continuous Review Systems |
-| `inventory.periodicreview` | The $(R, S)$ policy, whose protection interval is $R + L$ | Continuous Review Systems |
+| `inventory.continuousreview` | The $(r, Q)$ policy: lead time demand, the measures, the cost bounds, and the optimization | Continuous and Periodic Review Systems |
+| `inventory.periodicreview` | The $(R, S)$ policy, whose protection interval is $R + L$ | Continuous and Periodic Review Systems |
 | `inventory.multiechelon` | One-for-one ordering across two levels: Palm's theorem, METRIC, VARI-METRIC, marginal allocation, and the Lagrangian | Multi-Echelon Inventory Systems |
 
 ## Changing the KSL version
