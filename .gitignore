@@ -1,0 +1,39 @@
+# ---------------------------------------------------------------------------
+# Gradle
+#
+# The wrapper itself is committed, so that a clone builds with the same Gradle
+# version the author used. Nothing here ignores it today; the negation below is
+# there so that adding a blanket *.jar rule later cannot quietly drop the one
+# jar the build needs in order to start.
+# ---------------------------------------------------------------------------
+build/
+.gradle/
+.kotlin/
+!gradle/wrapper/gradle-wrapper.jar
+local.properties
+
+# ---------------------------------------------------------------------------
+# The KSL writes reports and plots here whenever a program uses its io package,
+# so running an example is enough to create it.
+# ---------------------------------------------------------------------------
+kslOutput/
+
+# ---------------------------------------------------------------------------
+# IDE
+#
+# IntelliJ is the documented editor for this project. Its project directory
+# holds machine-specific paths and is not shared.
+# ---------------------------------------------------------------------------
+.idea/
+*.iml
+*.ipr
+*.iws
+out/
+.vscode/
+
+# ---------------------------------------------------------------------------
+# OS cruft
+# ---------------------------------------------------------------------------
+.DS_Store
+**/.DS_Store
+Thumbs.db
