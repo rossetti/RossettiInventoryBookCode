@@ -181,6 +181,54 @@ class LeadTimeDemand private constructor(
         }
 
         /**
+         * A lead time demand given by its mass function, `pmf[x] = P(D(L) = x)`
+         * for x = 0, 1, ..., pmf.lastIndex.
+         *
+         * This is for a distribution no family describes, such as a convolution or
+         * a mixture. The masses must be non-negative and sum to one within `1e-9`;
+         * whatever mass a truncated tail lost is added back to the last entry, so
+         * the mean and the loss functions stay consistent with one another.
+         */
+        fun tabulated(pmf: DoubleArray, label: String = "tabulated"): LeadTimeDemand {
+            require(pmf.isNotEmpty()) { "a mass function needs at least one entry" }
+            require(pmf.all { it >= 0.0 }) { "masses cannot be negative" }
+            val total = pmf.sum()
+            require(kotlin.math.abs(total - 1.0) < 1.0e-9) { "masses must sum to one, sum to $total" }
+            val masses = pmf.copyOf().also { it[it.lastIndex] += 1.0 - total }
+            val d = TabulatedDistribution(masses)
+            val third = masses.withIndex().sumOf { (x, p) -> x.toDouble() * x * x * p }
+            return LeadTimeDemand(d, label, d.mean(), d.variance(), third, isDiscrete = true)
+        }
+
+        /**
+         * Condition, then average: the mixture that takes lead time demand [parts]'
+         * second member with probability its first. Every part must be discrete.
+         * The mass function of each is read from its distribution function until
+         * the remaining tail, weighted, is below [tailTolerance].
+         */
+        fun mixture(parts: List<Pair<Double, LeadTimeDemand>>, tailTolerance: Double = 1.0e-12): LeadTimeDemand {
+            require(parts.isNotEmpty()) { "a mixture needs at least one part" }
+            require(parts.all { it.second.isDiscrete }) { "every part of the mixture must be discrete" }
+            val weight = parts.sumOf { it.first }
+            require(kotlin.math.abs(weight - 1.0) < 1.0e-9) { "mixture weights must sum to one, sum to $weight" }
+            val masses = ArrayList<Double>()
+            for ((w, part) in parts) {
+                if (w == 0.0) continue
+                var x = 0
+                var below = 0.0
+                while (w * (1.0 - below) > tailTolerance) {
+                    val at = part.cdf(x.toDouble())
+                    val p = at - below
+                    if (x == masses.size) masses.add(0.0)
+                    masses[x] += w * p
+                    below = at
+                    x += 1
+                }
+            }
+            return tabulated(masses.toDoubleArray(), "mixture of ${parts.size}")
+        }
+
+        /**
          * Step 2 of @sec-continuousreview-ltd, carried out.
          *
          * Poisson when the variance to mean ratio is near one, negative binomial
@@ -219,3 +267,50 @@ class LeadTimeDemand private constructor(
 /** The smallest whole `S` whose distribution function reaches [ratio]. @eq-basestock-optimal. */
 internal fun LeadTimeDemand.smallestLevelReaching(ratio: Double): Int =
     ceil(inverseCdf(ratio) - 1.0e-12).toInt()
+
+/**
+ * A discrete distribution on 0, 1, ..., n given by its masses, with the loss
+ * functions of Appendix C computed by direct sums. It backs
+ * [LeadTimeDemand.tabulated] and nothing else.
+ */
+internal class TabulatedDistribution(private val masses: DoubleArray) : LossFunctionDistributionIfc {
+
+    private val cumulative = DoubleArray(masses.size).also { c ->
+        var s = 0.0
+        for (x in masses.indices) { s += masses[x]; c[x] = s }
+    }
+
+    private val m = masses.withIndex().sumOf { (x, p) -> x * p }
+    private val v = masses.withIndex().sumOf { (x, p) -> (x - m) * (x - m) * p }
+
+    override fun mean(): Double = m
+
+    override fun variance(): Double = v
+
+    override fun cdf(x: Double): Double {
+        if (x < 0.0) return 0.0
+        val k = floor(x).toInt()
+        return if (k >= cumulative.lastIndex) 1.0 else cumulative[k]
+    }
+
+    /** The smallest integer whose distribution function reaches [p]. */
+    override fun invCDF(p: Double): Double {
+        require(p in 0.0..1.0) { "p must lie in [0, 1], was $p" }
+        for (x in cumulative.indices) if (cumulative[x] >= p - 1.0e-15) return x.toDouble()
+        return cumulative.lastIndex.toDouble()
+    }
+
+    /** `G1(x) = E[(X - x)+]`, Equation C.9. */
+    override fun firstOrderLossFunction(x: Double): Double {
+        var s = 0.0
+        for (j in masses.indices) if (j > x) s += (j - x) * masses[j]
+        return s
+    }
+
+    /** `G2(x) = (1/2) E[(X - x)(X - x - 1)+]`, Equation C.10. */
+    override fun secondOrderLossFunction(x: Double): Double {
+        var s = 0.0
+        for (j in masses.indices) if (j > x) s += (j - x) * (j - x - 1.0) * masses[j]
+        return 0.5 * s
+    }
+}

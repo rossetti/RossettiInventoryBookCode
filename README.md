@@ -57,6 +57,7 @@ Chapter 7 material. Section labels in the book are semantic for the same reason.
 | `inventory.continuousreview` | The $(r, Q)$ policy: lead time demand, the measures, the cost bounds, and the optimization | Continuous and Periodic Review Systems |
 | `inventory.periodicreview` | The $(R, S)$ policy, whose protection interval is $R + L$ | Continuous and Periodic Review Systems |
 | `inventory.multiechelon` | One-for-one ordering across two levels: Palm's theorem, METRIC, VARI-METRIC, marginal allocation, and the Lagrangian | Multi-Echelon Inventory Systems |
+| `inventory.multiechelon` | Batch ordering across two levels: Axsäter's exact recursion, the order-count law, the hub's lead time demand, the distribution of the wait at the hub, and the two-level iteration | Multi-Echelon Systems with Batch Ordering |
 
 ## Changing the KSL version
 
