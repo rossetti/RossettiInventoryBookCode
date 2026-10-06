@@ -16,7 +16,7 @@
 // scripts/check-solutions.sh fails if solution material appears under src/.
 // =============================================================================
 plugins {
-    kotlin("jvm") version "2.2.0"
+    kotlin("jvm") version "2.4.20"
     application
 }
 
@@ -30,7 +30,7 @@ repositories {
 dependencies {
     // The Kotlin Simulation Library, from Maven Central. Matches the version
     // documented in the KSL repository's README.
-    implementation("io.github.rossetti:KSLCore:R1.7")
+    implementation("io.github.rossetti:KSLCore:R1.7.1")
     testImplementation(kotlin("test"))
 }
 
@@ -43,7 +43,7 @@ application {
     // Override from the command line, for example
     //   ./gradlew run -PmainClass=inventory.lotsizing.Chapter3ExamplesKt
     mainClass.set(
-        providers.gradleProperty("mainClass").orElse("inventory.newsvendor.NewsvendorMonteCarloKt")
+        providers.gradleProperty("mainClass").orElse("inventory.newsvendor.NewsvendorExamplesKt")
     )
 }
 

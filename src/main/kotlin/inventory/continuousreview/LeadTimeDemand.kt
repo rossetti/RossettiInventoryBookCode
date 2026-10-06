@@ -229,6 +229,35 @@ class LeadTimeDemand private constructor(
         }
 
         /**
+         * Lead time demand that arrives in lots, @sec-continuousreview-lumpy: a
+         * Poisson number of demand epochs with mean [epochs], each for a lot drawn
+         * from [lotSize]. The mass function is built by Panjer's recursion,
+         *
+         * ```
+         *   g(0) = exp(-epochs),   g(x) = (epochs/x) * sum over y <= x of y P{Y = y} g(x - y)
+         * ```
+         *
+         * which is the recursion the `Lumpy` sheet of the workbook carries, until
+         * the mass left in the tail is below [tailTolerance].
+         */
+        fun compoundPoisson(epochs: Double, lotSize: LotSize, tailTolerance: Double = 1.0e-13): LeadTimeDemand {
+            require(epochs > 0.0) { "the expected number of demand epochs must be positive" }
+            val masses = ArrayList<Double>()
+            masses.add(kotlin.math.exp(-epochs))
+            var below = masses[0]
+            var x = 0
+            while (1.0 - below > tailTolerance || x < epochs * lotSize.mean) {
+                x += 1
+                var sum = 0.0
+                for ((y, p) in lotSize.masses) if (y <= x) sum += y * p * masses[x - y]
+                val g = epochs / x * sum
+                masses.add(g)
+                below += g
+            }
+            return tabulated(masses.toDoubleArray(), "compound Poisson")
+        }
+
+        /**
          * Step 2 of @sec-continuousreview-ltd, carried out.
          *
          * Poisson when the variance to mean ratio is near one, negative binomial

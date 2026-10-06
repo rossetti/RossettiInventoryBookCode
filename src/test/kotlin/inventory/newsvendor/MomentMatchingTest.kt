@@ -235,9 +235,4 @@ class MomentMatchingTest {
         val a: Double, val b: Double, val c: Double, val d: Double, val e: Double,
     )
 
-    private operator fun Quint.component1() = a
-    private operator fun Quint.component2() = b
-    private operator fun Quint.component3() = c
-    private operator fun Quint.component4() = d
-    private operator fun Quint.component5() = e
 }

@@ -61,6 +61,9 @@ data class RQPerformance(
  * @param holdingCost the cost of holding one unit for one unit of time, `h`
  * @param backorderCost the cost of owing one unit for one unit of time, `b`
  * @param leadTimeDemand the distribution of `D(L)`, @sec-continuousreview-ltd
+ * @param lotSize the units demanded at one demand epoch, @sec-continuousreview-lumpy.
+ *   Only [fillRate] reads it; every other measure is a functional of `D(L)`
+ *   alone, which must already be the compound distribution these lots build.
  */
 class RQModel(
     val demandRate: Double,
@@ -68,12 +71,16 @@ class RQModel(
     val holdingCost: Double,
     val backorderCost: Double,
     val leadTimeDemand: LeadTimeDemand,
+    val lotSize: LotSize = LotSize.ONE,
 ) {
     init {
         require(demandRate > 0.0) { "the demand rate must be positive" }
         require(orderCost >= 0.0) { "the order cost cannot be negative" }
         require(holdingCost > 0.0) { "the holding cost must be positive" }
         require(backorderCost > 0.0) { "the backorder cost must be positive" }
+        require(lotSize.isSingleUnit || leadTimeDemand.isDiscrete) {
+            "demand in lots fills whole units, and ${leadTimeDemand.familyName} lead time demand is continuous"
+        }
     }
 
     /** `theta`, the mean of the lead time demand. */
@@ -104,14 +111,54 @@ class RQModel(
     }
 
     /**
-     * @eq-type2, the fill rate.
+     * The UNIT fill rate, units filled from the shelf on arrival over units
+     * demanded. @eq-lumpy-fillrate.
      *
-     * @eq-fr-equals-rr shows that the fill rate equals the ready rate when demand
-     * arrives one unit at a time, which is the case every model in this chapter
-     * treats. The two are separate methods because they are separate measures,
-     * and an item whose demand arrives in lots has two different numbers here.
+     * Demand epochs are Poisson, so by PASTA a lot finds the net inventory in its
+     * time-stationary state, `IN = IP - D(L)` with the position uniform on
+     * `r+1` through `r+Q`. A lot of `Y` units takes `min(Y, IN+)` of them, and
+     *
+     * ```
+     *   E[min(Y, IN+)] = sum over j >= 1 of P{Y >= j} P{IN >= j}
+     *   P{IN >= j}     = 1 - [G1(r-j+1) - G1(r+Q-j+1)] / Q       @eq-lumpy-netatleast
+     * ```
+     *
+     * so the fill rate is that sum divided by `E[Y]`. The `j = 1` term alone is
+     * @eq-rq-readyrate. When every lot is one unit there is no other term, and
+     * this is @eq-fr-equals-rr: the fill rate IS the ready rate. When lots can be
+     * larger, each further term weights a smaller probability, and the fill rate
+     * falls below the ready rate.
+     *
+     * Under a continuous lead time demand family only single units are allowed,
+     * and the ready rate is returned, as @eq-fr-equals-rr says it should be.
      */
-    fun fillRate(r: Int, q: Int): Double = readyRate(r, q)
+    fun fillRate(r: Int, q: Int): Double {
+        requirePolicy(r, q)
+        if (lotSize.isSingleUnit) return readyRate(r, q)
+        var filled = 0.0
+        for (j in 1..lotSize.largest) filled += lotSize.atLeast(j) * netAtLeast(j, r, q)
+        return filled / lotSize.mean
+    }
+
+    /**
+     * The LOT fill rate, the proportion of lots filled complete on arrival:
+     * `sum over y of P{Y = y} P{IN >= y}`. @sec-continuousreview-lumpy-fillrate.
+     *
+     * A lot that takes two of the four units it asked for counts as a failure
+     * here and as half a success in [fillRate]. The two can fall in either order:
+     * [fillRate] weights a lot by its size and this weights every lot alike.
+     * Neither exceeds the ready rate, and under single units both are it.
+     */
+    fun lotFillRate(r: Int, q: Int): Double {
+        requirePolicy(r, q)
+        if (lotSize.isSingleUnit) return readyRate(r, q)
+        return lotSize.masses.entries.sumOf { (y, p) -> p * netAtLeast(y, r, q) }
+    }
+
+    /** `P{IN >= j}` seen by an arriving lot, @eq-lumpy-netatleast. At `j = 1` it is [readyRate]. */
+    private fun netAtLeast(j: Int, r: Int, q: Int): Double =
+        1.0 - (leadTimeDemand.lossFirst((r - j + 1).toDouble()) -
+            leadTimeDemand.lossFirst((r + q - j + 1).toDouble())) / q
 
     /** @eq-rq-onhand. */
     fun expectedOnHand(r: Int, q: Int): Double {
@@ -209,14 +256,13 @@ class RQModel(
         val q = policy.orderQuantity
         val backorders = expectedBackorders(r, q)
         val onHand = expectedOnHand(r, q)
-        val ready = readyRate(r, q)
         return RQPerformance(
             policy = policy,
             orderFrequency = orderFrequency(q),
             expectedBackorders = backorders,
             varianceBackorders = varianceBackorders(r, q),
-            readyRate = ready,
-            fillRate = ready,
+            readyRate = readyRate(r, q),
+            fillRate = fillRate(r, q),
             expectedOnHand = onHand,
             orderingCostRate = orderCost * orderFrequency(q),
             holdingCostRate = holdingCost * onHand,
@@ -282,10 +328,10 @@ class RQModel(
      *
      * @sec-continuousreview-updating revises the mean and standard deviation of `D(L)` every
      * forecast period, and a question such as what a shorter lead time is worth
-     * changes only this one input. The costs and the demand rate carry over.
+     * changes only this one input. The costs, the demand rate and the lot sizes carry over.
      */
     fun withLeadTimeDemand(leadTimeDemand: LeadTimeDemand): RQModel =
-        RQModel(demandRate, orderCost, holdingCost, backorderCost, leadTimeDemand)
+        RQModel(demandRate, orderCost, holdingCost, backorderCost, leadTimeDemand, lotSize)
 
     /**
      * The same quantity summed term by term, for checking [windowTotal].
@@ -338,12 +384,13 @@ class RQModel(
             holdingCost: Double,
             readyRateTarget: Double,
             leadTimeDemand: LeadTimeDemand,
+            lotSize: LotSize = LotSize.ONE,
         ): RQModel {
             require(readyRateTarget > 0.0 && readyRateTarget < 1.0) {
                 "a ready rate target must lie strictly between 0 and 1, was $readyRateTarget"
             }
             val implied = readyRateTarget * holdingCost / (1.0 - readyRateTarget)
-            return RQModel(demandRate, orderCost, holdingCost, implied, leadTimeDemand)
+            return RQModel(demandRate, orderCost, holdingCost, implied, leadTimeDemand, lotSize)
         }
 
         /** `h = ic`, the carrying charge of @sec-costparams-h applied to a unit cost. */

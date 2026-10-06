@@ -54,18 +54,18 @@ class RSModelTest {
         while (tau.cdf(level.toDouble()) < model.criticalRatio) level++
         assertEquals(16, level)
         val penalty = (model.cost(16) - model.cost(14)) / model.cost(14)
-        assertEquals(0.107, penalty, 5.0e-4)
+        assertEquals(0.108, penalty, 5.0e-4)
     }
 
     @Test
     fun `the measures reproduce @tbl-periodic-transformer`() {
         data class Row(val b: Double, val i: Double, val fr: Double, val cost: Double)
         val expected = mapOf(
-            12 to Row(0.4233, 3.0483, 0.7549, 9155.15),
-            13 to Row(0.2572, 3.8822, 0.8339, 8527.55),
-            14 to Row(0.1501, 4.7751, 0.8928, 8459.31),
-            15 to Row(0.0841, 5.7091, 0.9340, 8782.45),
-            16 to Row(0.0453, 6.6703, 0.9612, 9363.85),
+            12 to Row(0.4233, 3.0483, 0.7549, 9093.07),
+            13 to Row(0.2572, 3.8822, 0.8339, 8465.46),
+            14 to Row(0.1501, 4.7751, 0.8928, 8397.22),
+            15 to Row(0.0841, 5.7091, 0.9340, 8720.37),
+            16 to Row(0.0453, 6.6703, 0.9612, 9301.76),
         )
         for ((level, row) in expected) {
             val p = model.evaluate(level)
@@ -77,9 +77,15 @@ class RSModelTest {
     }
 
     @Test
-    fun `the ordering cost is the calendar and not the demand`() {
-        assertEquals(12.0, model.orderFrequency, 1.0e-12)
-        assertEquals(2640.0, model.evaluate(14).orderingCostRate, 1.0e-9)
+    fun `a review orders only when some demand has arrived since the last`() {
+        // @eq-periodic-orderfreq: P{D(R) >= 1}/R, and a month with no demand has nothing to order.
+        assertEquals(1.0 - kotlin.math.exp(-3.75), model.orderProbability, 1.0e-12)
+        assertEquals(11.7178, model.orderFrequency, 5.0e-5)
+        assertEquals(2577.91, model.evaluate(14).orderingCostRate, 5.0e-3)
+        // Halving demand barely moves it: the calendar, not the demand, sets the ordering cost.
+        val half = RSModel(lambda / 2, 220.0, 950.0, 8550.0, 2.0 / 12.0, 1.0 / 12.0,
+            DemandOverInterval.poisson(lambda / 2))
+        assertEquals(10.16, half.orderFrequency, 5.0e-3)
     }
 
     @Test
@@ -147,8 +153,8 @@ class RSModelTest {
         var best = Double.MAX_VALUE
         var i = 1
         while (i <= 400) { best = minOf(best, bestCost(i * 0.001)); i++ }
-        assertEquals(8195.01, best, 5.0e-2)
-        assertEquals(8244.89, rule, 5.0e-2)
+        assertEquals(8186.92, best, 5.0e-2)
+        assertEquals(8222.32, rule, 5.0e-2)
         assertTrue((rule - best) / best < 0.01, "the EOQ rule should be within a percent")
     }
 
@@ -176,6 +182,14 @@ class RSModelTest {
         assertEquals(longEnd.familyName, shortEnd.familyName)
         assertEquals(rate * 2.0 / 52.0, shortEnd.mean, 1.0e-9)
         assertEquals(rate * 8.0 / 52.0, longEnd.mean, 1.0e-9)
+    }
+
+    @Test
+    fun `under (R, S) the undershoot is the review's demand less one`() {
+        // s = S - 1: any demand triggers an order, so U = D(R) - 1 given D(R) >= 1.
+        val mu = lambda * model.reviewInterval
+        val exact = mu / (1.0 - kotlin.math.exp(-mu)) - 1.0
+        assertEquals(2.8403, exact, 5.0e-5)
     }
 
     @Test

@@ -98,7 +98,8 @@ data class RSPerformance(
  * one of those two averages applied to a base-stock result.
  *
  * Two measures are closed form and need no quadrature. The order frequency is
- * `1/R` because an order is placed at every review, and the expected on hand is
+ * `P{D(R) >= 1}/R`, because a review places an order exactly when some demand has
+ * arrived since the last one, and the expected on hand is
  * @eq-periodic-onhand because the expectation of a uniform exposure is `lambda(L +
  * R/2)`. The backorder level and the ready rate are time averages over the review
  * cycle and are integrated numerically, by Simpson's rule on [nodes] intervals.
@@ -138,8 +139,19 @@ class RSModel(
     /** The mean exposure of @eq-periodic-onhand, `lambda(L + R/2)`. */
     val meanExposure: Double get() = demandRate * (leadTime + reviewInterval / 2.0)
 
-    /** @eq-periodic-orderfreq. An order is placed at every review, whatever the demand. */
-    val orderFrequency: Double get() = 1.0 / reviewInterval
+    /**
+     * The probability that a review places an order. Every order restores the
+     * position to `S`, so the next review finds it below `S`, and orders, exactly
+     * when some demand has arrived in between.
+     */
+    val orderProbability: Double get() = 1.0 - demand.over(reviewInterval).cdf(0.0)
+
+    /**
+     * @eq-periodic-orderfreq. Not `1/R`: a review that finds no demand since the last
+     * one has nothing to order. The difference is `P{D(R) = 0}`, which is small
+     * when a review interval holds several units of demand and large when it does not.
+     */
+    val orderFrequency: Double get() = orderProbability / reviewInterval
 
     /** The newsvendor ratio of @eq-basestock-optimal, unchanged by the review interval. */
     val criticalRatio: Double get() = backorderCost / (backorderCost + holdingCost)

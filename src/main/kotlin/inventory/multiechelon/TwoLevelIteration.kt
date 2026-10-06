@@ -66,9 +66,13 @@ class TwoLevelProblem(
         val ONE_UNIT = doubleArrayOf(0.0, 1.0)
 
         /**
-         * The backorder cost that makes a fill rate target [gamma] the optimal one:
-         * `b = gamma h / (1 - gamma)`, since @eq-basestock-optimal sets the critical
-         * ratio `b/(b + h)` equal to the target.
+         * The backorder cost that makes a ready rate target [gamma] the optimal one:
+         * `b = gamma h / (1 - gamma)`, @eq-implied-backorder, since
+         * @eq-basestock-optimal sets the critical ratio `b/(b + h)` equal to the target.
+         *
+         * The target is the ready rate of a base-stock policy under single-unit
+         * demand. It prices `b`; it is not the ready rate an `(r, Q)` hub reaches,
+         * and it is not a fill rate, since the hub's customers order in batches.
          */
         fun backorderCostForTarget(gamma: Double, holding: Double): Double {
             require(gamma > 0.0 && gamma < 1.0) { "a target must lie strictly between 0 and 1" }

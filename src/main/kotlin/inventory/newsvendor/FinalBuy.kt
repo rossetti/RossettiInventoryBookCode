@@ -3,7 +3,7 @@ package inventory.newsvendor
 import org.jetbrains.kotlinx.dataframe.DataFrame
 import org.jetbrains.kotlinx.dataframe.api.getColumn
 import org.jetbrains.kotlinx.dataframe.io.ColType
-import org.jetbrains.kotlinx.dataframe.io.readCSV
+import org.jetbrains.kotlinx.dataframe.io.readCsv
 import java.io.File
 
 /**
@@ -51,7 +51,7 @@ object FinalBuy {
             "cannot find ${file.absolutePath}. Run this from the root of the " +
                 "code project, where data/ lives."
         }
-        val df = DataFrame.readCSV(
+        val df = DataFrame.readCsv(
             file,
             colTypes = mapOf("week" to ColType.Int, "demand" to ColType.Int)
         )

@@ -112,13 +112,21 @@ fun drpListing() {
     fun vc(d: List<Double>): Double {
         val m = d.average(); return d.sumOf { (it - m) * (it - m) } / d.size / (m * m)
     }
-    val w = (BeltNetwork.cumulativeLeadTime + 1)..p.horizon
-    println("  VC of what the regions SELL      %.4f".format(vc(w.map { total[it - 1] })))
-    println("  VC of what the warehouse SEES    %.4f".format(vc(w.map { cw[it - 1] })))
+    // What the regions sell is measured over the twelve sales months. What the
+    // warehouse sees is measured over the periods in which it has a requirement
+    // under lot-for-lot, first to last. Every row of @tbl-mrp-bullwhip uses that
+    // same window, and a batching rule that empties one of its periods is charged
+    // the zero.
+    val sales = (BeltNetwork.cumulativeLeadTime + 1)..p.horizon
+    val span = (cw.indexOfFirst { it > 0.0 } + 1)..(cw.indexOfLast { it > 0.0 } + 1)
+    println("  VC of what the regions SELL      %.4f   over periods %s".format(
+        vc(sales.map { total[it - 1] }), sales))
+    println("  VC of what the warehouse SEES    %.4f   over periods %s".format(
+        vc(span.map { cw[it - 1] }), span))
     println("  past due %.0f, total relevant cost %.2f".format(p.pastDueReleases, p.relevantCost))
 
     println()
-    println("  What the regions' own rule does to the warehouse:")
+    println("  What the regions' own rule does to the warehouse, VC over periods %s:".format(span))
     println("  %-32s %9s %9s %9s %9s".format(
         "rule at every region", "VC at CW", "regions", "centre", "total"))
     for (r in listOf(inventory.dynamiclotsizing.LotForLot,
@@ -129,7 +137,10 @@ fun drpListing() {
         val q = BeltNetwork.plan(regionRule = r)
         val seen = (1..q.horizon).map { t -> q.recordFor("CW").gross(t) }
         val centre = q.recordFor("CW").relevantCost
+        check(seen.sum() == span.sumOf { seen[it - 1] }) {
+            "${r.name} puts a warehouse requirement outside periods $span"
+        }
         println("  %-32s %9.4f %9.2f %9.2f %9.2f".format(
-            r.name, vc(w.map { seen[it - 1] }), q.relevantCost - centre, centre, q.relevantCost))
+            r.name, vc(span.map { seen[it - 1] }), q.relevantCost - centre, centre, q.relevantCost))
     }
 }

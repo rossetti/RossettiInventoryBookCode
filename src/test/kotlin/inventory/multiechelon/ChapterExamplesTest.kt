@@ -116,23 +116,28 @@ class ChapterExamplesTest {
         val item = utility(60.0, depotStock = 0, baseStock = 0)
         val data = MAFItemData(MAFItemData.createDepotLevels(0, 26, 1), 0.01, 40, item)
         // @tbl-allocation-transformer, as the ported code produces it.
-        close(data.alphaHat[12], 16.6266, 5e-3)
-        close(data.alphaHat[13], 15.6433, 5e-3)
+        close(data.alphaHat[12], 16.6303, 5e-4)
+        close(data.alphaHat[13], 15.6433, 5e-4)
         assertEquals(11, data.dStar[11])
-        assertEquals(8, data.dStar[12])
+        assertEquals(12, data.dStar[12])
+        assertEquals(9, data.dStar[13])
         // Flushout, @sec-multiechelon-allocation-flushout: the best depot level falls as the total rises.
-        assertTrue(data.dStar[12] < data.dStar[11],
-            "expected flushout at 12; got ${data.dStar[11]} then ${data.dStar[12]}")
-        // Non-convexity, @sec-multiechelon-allocation-convexity: the reduction below total 13 is larger,
-        // so 13 lies above the chord joining 12 and 14.
+        assertTrue(data.dStar[13] < data.dStar[12],
+            "expected flushout at 13; got ${data.dStar[12]} then ${data.dStar[13]}")
+        assertEquals(15, data.dStar[19])
+        assertEquals(12, data.dStar[20])
+        // Non-convexity, @sec-multiechelon-allocation-convexity: the reduction at total 13 is larger
+        // than the one at 12, so 12 lies above the chord joining 11 and 13.
+        val r12 = data.alphaHat[11] - data.alphaHat[12]
         val r13 = data.alphaHat[12] - data.alphaHat[13]
-        val r14 = data.alphaHat[13] - data.alphaHat[14]
-        assertTrue(r14 > r13, "expected the non-convexity of @sec-multiechelon-allocation-convexity")
-        assertTrue(data.alphaHat[13] > (data.alphaHat[12] + data.alphaHat[14]) / 2.0)
-        // Convexification drops 13, not 14.
+        assertTrue(r13 > r12, "expected the non-convexity of @sec-multiechelon-allocation-convexity")
+        close(r12, 0.9850, 5e-4)
+        close(r13, 0.9870, 5e-4)
+        assertTrue(data.alphaHat[12] > (data.alphaHat[11] + data.alphaHat[13]) / 2.0)
+        // Convexification drops 12, not 13.
         val kept = data.scValues.take(data.totalNumberOfConvexPoints).toSet()
-        assertTrue(13 !in kept, "total 13 should have been dropped")
-        assertTrue(12 in kept && 14 in kept)
+        assertTrue(12 !in kept, "total 12 should have been dropped")
+        assertTrue(11 in kept && 13 in kept)
         assertTrue(20 !in kept, "total 20 should have been dropped")
     }
 
@@ -152,5 +157,17 @@ class ChapterExamplesTest {
         assertTrue(alg.totalCost <= 250_000.0 + 0.01, "spent ${alg.totalCost}")
         assertTrue(alg.totalExpectedBackOrders > 0.0)
         assertEquals(model.totalStockingCost, alg.totalCost, 1e-9)
+        val deltas = alg.buys.map { it.delta }
+        assertTrue(deltas.zipWithNext().all { (a, b) -> b <= a + 1e-12 }, "a delta rose: $deltas")
+        // @tbl-allocation-merge: steps 12 and 19 buy two transformers, jumping totals 12 and 20.
+        val twos = alg.buys.withIndex().filter { it.value.units == 2 }.map { it.index + 1 }
+        assertEquals(listOf(12, 19), twos)
+        val step12 = alg.buys[11]
+        close(step12.delta * 1000.0, 0.2595)
+        close(step12.cumulativeCost, 49_400.0, 1e-6)
+        assertEquals(13, step12.totalUnits)
+        close(alg.buys[18].delta * 1000.0, 0.2261)
+        close(alg.buys[27].cumulativeCost, 114_000.0, 1e-6)
+        assertEquals(2, alg.buys[28].itemNumber)
     }
 }

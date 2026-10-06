@@ -10,7 +10,7 @@ import kotlin.test.assertTrue
 /**
  * The two-level iteration of @sec-batchedmultiechelon-algorithm, and @sec-batchedmultiechelon-validate.
  *
- * The hub's backorder cost is set from a hub fill rate target of 0.8, so
+ * The hub's backorder cost is set from a hub ready rate target of 0.8, so
  * `b_0 = 0.8 h / 0.2 = 4h`, throughout. Every fixed point is priced against an
  * exact cost: Axsäter's where he applies, the chapter's exact route otherwise.
  */

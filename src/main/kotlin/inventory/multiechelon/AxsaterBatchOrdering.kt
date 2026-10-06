@@ -40,7 +40,7 @@ class AxsaterBatchOrdering(
     private val n = base.stores
     private val q = storeBatch
 
-    /** The three approximations of section 3.2, equations (21) to (24). */
+    /** The three approximations of Axsäter's section 3.2, equations (21) to (24). */
     enum class Approximation { ONE, TWO, THREE }
 
     /**
@@ -122,7 +122,7 @@ class AxsaterBatchOrdering(
         return sum / (hubBatches * q)
     }
 
-    /** The approximate cost per unit time, section 3.2. */
+    /** The approximate cost per unit time, Axsäter's section 3.2. */
     fun approximateCost(which: Approximation, hubReorder: Int, storeReorder: Int): Double {
         requireRange(hubReorder, storeReorder)
         return when (which) {
@@ -174,7 +174,7 @@ class AxsaterBatchOrdering(
     }
 
     /**
-     * The probabilities of section 3.1 for one value of `R_w`: `y^n_{i,j}` of (7)
+     * The probabilities of Axsäter's section 3.1 for one value of `R_w`: `y^n_{i,j}` of (7)
      * and (8), `x^N_{i,j}` of (13) and (14), `p_{i,j}` of (16), `p^{N-1}_{i,j}` of
      * (17), `p^1_{i,j}` of (18), and `q_{m,j}` of (19). Rows are system demands
      * `i`, columns are storeroom orders `j`.

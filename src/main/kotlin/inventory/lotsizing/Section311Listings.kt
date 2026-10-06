@@ -84,9 +84,9 @@ fun main() {
 
     rule("3.11.5 what it refuses")
     listOf<Pair<String, () -> Unit>>(
-        "a zero backorder cost" to { ShortagePolicy.backordered(0.0); Unit },
-        "a rate below the demand rate" to { Replenishment.atRate(80.0, 100.0); Unit },
-        "a model that needs a backorder cost" to { PlannedBackorderModel.optimize(sheet); Unit },
+        "a zero backorder cost" to { ShortagePolicy.backordered(0.0) },
+        "a rate below the demand rate" to { Replenishment.atRate(80.0, 100.0) },
+        "a model that needs a backorder cost" to { PlannedBackorderModel.optimize(sheet) },
     ).forEach { (what, attempt) ->
         try { attempt(); println("  $what: accepted, which is wrong") }
         catch (e: Exception) { println("  $what:"); println("    ${e.message}") }

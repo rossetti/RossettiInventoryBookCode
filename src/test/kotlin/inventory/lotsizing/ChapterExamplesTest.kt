@@ -13,7 +13,7 @@ class ChapterExamplesTest {
 
     /** @exm-cycle, working one cycle. */
     @Test
-    fun `example 3-1 the general cycle`() {
+    fun `the general cycle, @exm-cycle`() {
         val parameters = CostParameters(
             demandRate = 100.0,
             unitCost = 8.0,
@@ -35,7 +35,7 @@ class ChapterExamplesTest {
 
     /** @exm-cycle-measures, performance of the general cycle. */
     @Test
-    fun `example 3-6 performance measures of the general cycle`() {
+    fun `performance measures of the general cycle, @exm-cycle-measures`() {
         val parameters = CostParameters(
             demandRate = 100.0,
             unitCost = 8.0,
@@ -60,7 +60,7 @@ class ChapterExamplesTest {
 
     /** @exm-eoq, the economic order quantity. */
     @Test
-    fun `example 3-2 the economic order quantity`() {
+    fun `the economic order quantity, @exm-eoq`() {
         val best = EconomicOrderQuantity.optimize(eoqExample())
 
         assertEquals(216.0, eoqExample().baseHoldingRate, 1e-12, "h = i c")
@@ -78,7 +78,7 @@ class ChapterExamplesTest {
 
     /** @exm-eoq-sensitivity, what a wrong order quantity costs. */
     @Test
-    fun `example 3-3 sensitivity of the order quantity`() {
+    fun `sensitivity of the order quantity, @exm-eoq-sensitivity`() {
         val parameters = eoqExample()
         val best = EconomicOrderQuantity.optimize(parameters)
         val larger = EconomicOrderQuantity.evaluate(parameters, 1.5 * best.orderQuantity)
@@ -97,7 +97,7 @@ class ChapterExamplesTest {
 
     /** @exm-allunits, an all-units discount. */
     @Test
-    fun `example 3-4 an all-units discount`() {
+    fun `an all-units discount, @exm-allunits`() {
         val parameters = CostParameters(
             demandRate = 8000.0,
             schedule = AllUnits(listOf(PriceLevel(0.0, 10.0), PriceLevel(500.0, 9.0))),
@@ -123,7 +123,7 @@ class ChapterExamplesTest {
 
     /** @exm-incremental, an incremental discount. */
     @Test
-    fun `example 3-5 an incremental discount`() {
+    fun `an incremental discount, @exm-incremental`() {
         val parameters = incrementalExample()
         val schedule = parameters.schedule as Incremental
 

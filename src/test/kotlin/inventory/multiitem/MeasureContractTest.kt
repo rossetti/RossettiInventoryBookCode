@@ -92,7 +92,7 @@ class MeasureContractTest {
     }
 
     @Test
-    fun `the power of two bound of equation 4 33 holds where the exponent is free`() {
+    fun `the power of two bound of @eq-pow2-bound holds where the exponent is free`() {
         val base = 0.05
         val rule = PowerOfTwoMultiple(base)
         // @sec-multiitem-joint-bound states the bound for a non-negative exponent, which requires the
